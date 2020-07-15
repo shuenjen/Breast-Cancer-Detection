@@ -1,5 +1,7 @@
 import argparse
 import time
+import tensorflow as tf
+import numpy as np
 
 import config
 from data_operations.dataset_feed import create_dataset
@@ -8,8 +10,11 @@ from data_operations.data_preprocessing import import_cbisddsm_training_dataset,
 from data_visualisation.output import evaluate
 from model.train_test_model import make_predictions, train_network
 from model.vgg_model import generate_vgg_model
+from model.vgg_model_add_density import generate_vgg_model_and_density
+from model.resnet_model import generate_resnet_model
+from model.resnet_model_add_density import generate_resnet_model_and_density
 from model.vgg_model_large import generate_vgg_model_large
-from utils import create_label_encoder, print_error_message, print_num_gpus_available, print_runtime
+from utils import create_label_encoder, print_error_message, print_num_gpus_available, print_runtime, print_config
 from tensorflow.keras.models import load_model
 
 def main() -> None:
@@ -19,6 +24,9 @@ def main() -> None:
     """
     parse_command_line_arguments()
     print_num_gpus_available()
+    
+    gpu = tf.config.experimental.list_physical_devices(device_type='GPU')
+    tf.config.experimental.set_memory_growth(gpu[0], True)
 
     # Start recording time.
     start_time = time.time()
@@ -41,37 +49,55 @@ def main() -> None:
             X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X_train_rebalanced,
                                                                       labels=y_train_rebalanced)
             # Create and train CNN model.
-            model = generate_vgg_model(l_e.classes_.size)
+            if config.cnn == "ResNet":
+                model = generate_resnet_model(l_e.classes_.size)
+            elif config.cnn == "VGG":
+                model = generate_vgg_model(l_e.classes_.size)
+            
             model = train_network(model, X_train, y_train, X_val, y_val, config.BATCH_SIZE, config.EPOCH_1,
                                   config.EPOCH_2)
 
         # Binary classification (CBIS-DDSM dataset).
         elif config.dataset == "CBIS-DDSM":
-            images, labels = import_cbisddsm_training_dataset(l_e)
-
+            images, labels, density = import_cbisddsm_training_dataset(l_e)
+            
+            X = np.vstack((images, density))
+            
             # Split training dataset into training/validation sets (75%/25% split).
-            X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=images, labels=labels)
+            X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X.transpose(), labels=labels)
+            # X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=images, labels=labels)
+            
             dataset_train = create_dataset(X_train, y_train)
             dataset_val = create_dataset(X_val, y_val)
-
+            
             # Create and train CNN model.
+            if config.cnn == "ResNet":
+                # model = generate_resnet_model(l_e.classes_.size)
+                model = generate_resnet_model_and_density(l_e.classes_.size)
 
-            if config.imagesize == "small":
-                model = generate_vgg_model(l_e.classes_.size)
-            else:
-                model = generate_vgg_model_large(l_e.classes_.size)
-
+            elif config.cnn == "VGG":
+                if config.imagesize == "small":
+                    model = generate_vgg_model_and_density(l_e.classes_.size)
+                else:
+                    model = generate_vgg_model_large(l_e.classes_.size)
+            
             model = train_network(model, dataset_train, None, dataset_val, None, config.BATCH_SIZE, config.EPOCH_1,
                                   config.EPOCH_2)
 
         else:
             print_error_message()
 
-        # Save the model
-        model.save("../saved_models/dataset-{}_model-{}_imagesize-{}.h5".format(config.dataset, config.model, config.imagesize))
+        try:
+            # Save the model
+            model.save_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_imagesize-{}.h5".format(config.dataset, config.model, config.cnn, config.imagesize))
+        except:
+            print ('save model error: ' + sys.exc_info()[0])
 
     elif config.run_mode == "test":
-        model = load_model("../saved_models/dataset-{}_model-{}_imagesize-{}.h5".format(config.dataset, config.model, config.imagesize))
+        model.load_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_imagesize-{}.h5".format(config.dataset, config.model, config.cnn, config.imagesize))
+
+    # print config
+    print_config()
 
     # Evaluate model results.
     if config.dataset == "mini-MIAS":
@@ -82,7 +108,7 @@ def main() -> None:
         evaluate(y_val, y_pred, l_e, config.dataset, 'B-M')
 
     # Print the prediction
-#     print(y_pred)
+    # print(y_pred)
 
     # Print training runtime.
     print_runtime("Total", round(time.time() - start_time, 2))
@@ -98,6 +124,10 @@ def parse_command_line_arguments() -> None:
                         default="mini-MIAS",
                         required=True,
                         help="The dataset to use. Must be either 'mini-MIAS' or 'CBIS-DDMS'."
+                        )
+    parser.add_argument("-c", "--cnn",
+                        default="ResNet",
+                        help="The CNN architecture to use. Must be either 'VGG' or 'ResNet'."
                         )
     parser.add_argument("-m", "--model",
                         default="basic",
@@ -120,6 +150,7 @@ def parse_command_line_arguments() -> None:
 
     args = parser.parse_args()
     config.dataset = args.dataset
+    config.cnn = args.cnn
     config.model = args.model
     config.run_mode = args.runmode
     config.imagesize = args.imagesize

@@ -48,7 +48,8 @@ def import_cbisddsm_training_dataset(label_encoder):
     df = pd.read_csv("../data/CBIS-DDSM/training.csv")
     list_IDs = df['img_path'].values
     labels = encode_labels(df['label'].values, label_encoder)
-    return list_IDs, labels
+    density = df['breast_density'].values
+    return list_IDs, labels, density
 
 
 def preprocess_image(image_path: str) -> np.ndarray:
