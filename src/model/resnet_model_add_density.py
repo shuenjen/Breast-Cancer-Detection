@@ -1,3 +1,5 @@
+# This file is contributed by Shuen-Jen Chen (based on resnet_model.py)
+
 import ssl
 
 from tensorflow.keras.applications import ResNet50

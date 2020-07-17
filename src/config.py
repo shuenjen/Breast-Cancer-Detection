@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, Ashay Patel, and Shuen-Jen Chen
+
 """
 Variables set by the command line arguments dictating which parts of the program to execute.
 """

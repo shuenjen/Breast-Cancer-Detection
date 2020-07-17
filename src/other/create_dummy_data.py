@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour
+
 from keras_preprocessing.image import ImageDataGenerator
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split

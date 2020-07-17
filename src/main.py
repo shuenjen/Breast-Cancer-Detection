@@ -1,4 +1,6 @@
-import argparse
+# This file is contributed by Adam Jaamour, Ashay Patel, and Shuen-Jen Chen
+
+Cimport argparse
 import time
 import tensorflow as tf
 import numpy as np

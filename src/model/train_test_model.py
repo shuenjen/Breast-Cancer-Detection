@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, and Ashay Patel
+
 from tensorflow.keras.losses import CategoricalCrossentropy, BinaryCrossentropy
 from tensorflow.keras.metrics import CategoricalAccuracy, BinaryAccuracy
 from tensorflow.keras.optimizers import Adam

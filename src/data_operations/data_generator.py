@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, and Ashay Patel
+
 import numpy as np
 import pydicom
 from pydicom.data import get_testdata_files

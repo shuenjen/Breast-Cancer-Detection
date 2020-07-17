@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, and Shuen-Jen Chen
+
 from sklearn.preprocessing import LabelEncoder
 import tensorflow as tf
 

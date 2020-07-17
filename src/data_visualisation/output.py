@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, Ashay Patel, and Shuen-Jen Chen
+
 import json
 
 import matplotlib.pyplot as plt
