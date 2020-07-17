@@ -12,9 +12,9 @@ def create_dataset(x, y):
     :param y: y values - labels for images
     :return: the dataset
     """
-    dataset_12 = tf.data.Dataset.from_tensor_slices((x[:, 0], np.array(x[:, 1], dtype=np.int)))
-    dataset_label = tf.data.Dataset.from_tensor_slices(y)
-    dataset = tf.data.Dataset.zip((dataset_12, dataset_label))
+    dataset_x = tf.data.Dataset.from_tensor_slices((x[:, 0], np.array(x[:, 1:], dtype=np.int)))
+    dataset_y = tf.data.Dataset.from_tensor_slices(y)
+    dataset = tf.data.Dataset.zip((dataset_x, dataset_y))
     
     # map values from dicom image path to array
     if config.imagesize == "small":
@@ -37,7 +37,7 @@ def parse_function_small(dataset, label):
     :param label:
     :return:
     """
-    filename, density = dataset
+    filename, features = dataset
     image_bytes = tf.io.read_file(filename)
     image = tfio.image.decode_dicom_image(image_bytes, color_dim=True, scale="auto", dtype=tf.uint16)
     as_png = tf.image.encode_png(image[0])
@@ -45,7 +45,7 @@ def parse_function_small(dataset, label):
     image = tf.image.resize(decoded_png, [config.VGG_IMG_SIZE['HEIGHT'], config.VGG_IMG_SIZE['HEIGHT']])
     image /= 255
 
-    return (image, density), label
+    return (image, features), label
 
 
 def parse_function_large(filename, label):

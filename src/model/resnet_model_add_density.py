@@ -52,7 +52,7 @@ def generate_resnet_model_and_density(classes_len: int):
     # model.add(Dropout(0.1, name='Dropout_Regularization'))
 
     model_density = Sequential()
-    model_density.add(Dense(1, input_shape=(1,), activation='relu'))
+    model_density.add(Dense(3, input_shape=(3,), activation='relu'))
     
     model_concat = concatenate([model.output, model_density.output], axis=-1)
     

@@ -59,9 +59,9 @@ def main() -> None:
 
         # Binary classification (CBIS-DDSM dataset).
         elif config.dataset == "CBIS-DDSM":
-            images, labels, density = import_cbisddsm_training_dataset(l_e)
+            images, labels, density, cc, mlo = import_cbisddsm_training_dataset(l_e)
             
-            X = np.vstack((images, density))
+            X = np.vstack((images, density, cc, mlo))
             
             # Split training dataset into training/validation sets (75%/25% split).
             X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X.transpose(), labels=labels)

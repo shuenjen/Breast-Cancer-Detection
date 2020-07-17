@@ -124,12 +124,14 @@ def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised
     title = str()
     if is_normalised:
         title = "Confusion Matrix Normalised"
+        vmax = 1
     elif not is_normalised:
         title = "Confusion Matrix"
+        vmax = np.max(cm.sum(axis=1))
 
     # Plot.
     fig, ax = plt.subplots(figsize=(6, 4))
-    sns.heatmap(cm, annot=True, ax=ax, fmt=fmt, cmap=plt.cm.Blues)  # annot=True to annotate cells
+    sns.heatmap(cm, annot=True, ax=ax, fmt=fmt, cmap=plt.cm.Blues, vmin=0, vmax=vmax)  # annot=True to annotate cells
 
     # Set labels, title, ticks and axis range.
     ax.set_xlabel('Predicted classes')
@@ -139,7 +141,6 @@ def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised
     ax.yaxis.set_ticklabels(label_encoder.classes_)
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0, ha='right', rotation_mode='anchor')
     plt.tight_layout()
-    bottom, top = ax.get_ylim()
     if is_normalised:
         plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_CM-norm.png".format(config.dataset, config.model, config.imagesize))
     elif not is_normalised:
@@ -245,7 +246,7 @@ def plot_training_results(hist_input, plot_name: str, is_frozen_layers) -> None:
         plt.plot(np.arange(0, n), hist_input.history["val_categorical_accuracy"], label="val_acc")
     elif config.dataset == "CBIS-DDSM":
         plt.plot(np.arange(0, n), hist_input.history["binary_accuracy"], label="train_acc")
-        plt.plot(np.arange(0, n), hist_input.history["val_loss"], label="val_loss")
+        plt.plot(np.arange(0, n), hist_input.history["val_binary_accuracy"], label="val_acc")
     plt.title(title)
     plt.xlabel("Epoch #")
     plt.ylabel("Loss/Accuracy")

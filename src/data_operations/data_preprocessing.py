@@ -49,7 +49,9 @@ def import_cbisddsm_training_dataset(label_encoder):
     list_IDs = df['img_path'].values
     labels = encode_labels(df['label'].values, label_encoder)
     density = df['breast_density'].values
-    return list_IDs, labels, density
+    cc = df['img'].map(lambda row: 1 if 'CC' in row else 0).values
+    mlo = df['img'].map(lambda row: 1 if 'MLO' in row else 0).values
+    return list_IDs, labels, density, cc, mlo
 
 
 def preprocess_image(image_path: str) -> np.ndarray:
