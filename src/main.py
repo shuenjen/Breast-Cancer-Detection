@@ -8,7 +8,7 @@ import numpy as np
 import config
 from data_operations.dataset_feed import create_dataset
 from data_operations.data_preprocessing import import_cbisddsm_training_dataset, import_minimias_dataset, \
-    dataset_stratified_split, generate_image_transforms
+    dataset_stratified_split, generate_image_transforms, import_minimias_dataset_roi
 from data_visualisation.output import evaluate
 from model.train_test_model import make_predictions, train_network
 from model.vgg_model import generate_vgg_model
@@ -42,10 +42,9 @@ def main() -> None:
         # Multiclass classification (mini-MIAS dataset)
         if config.dataset == "mini-MIAS":
             # Import entire dataset.
-            images, chars, labels = import_minimias_dataset(data_dir="../data/{}/images_processed".format(config.dataset),
+            images, chars, labels = import_minimias_dataset_roi(data_dir="../data/{}/images".format(config.dataset),
                                                      label_encoder=l_e)
-            print(chars.shape)
-
+            
             # Split dataset into training/test/validation sets (60%/20%/20% split).
             X_train, X_test, y_train, y_test = dataset_stratified_split(split=0.20, dataset=images, labels=labels)
             X_train_rebalanced, y_train_rebalanced = generate_image_transforms(X_train, y_train)

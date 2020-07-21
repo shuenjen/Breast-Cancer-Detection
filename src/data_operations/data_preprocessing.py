@@ -29,13 +29,109 @@ def import_minimias_dataset(data_dir: str, label_encoder) -> (np.ndarray, np.nda
     chars = list()
     
     df = pd.read_csv('/'.join(data_dir.split('/')[:-1]) + '/data_description.csv', header=None)
+    df_cnt = pd.DataFrame(df.groupby([0])[3].nunique()).reset_index()
+    df = df[~df[0].isin(list(df_cnt[df_cnt[3] > 1][0]))]
+    df = df.drop_duplicates(subset=[0], keep='first')
+    for row in df.iterrows():
+        if (row[1][3] is not np.nan) & (row[1][4] is np.nan):
+            continue
+        
+        images.append(preprocess_image(data_dir + '/' + row[1][0] + '.png'))
+        
+        label = 'normal'
+        if row[1][3] == 'B':
+            label = 'benign'
+        elif row[1][3] == 'M':
+            label = 'malignant'
+        labels.append(label)
+        
+        chars.append(row[1][1])
 
     # Loop over the image paths and update the data and labels lists with the pre-processed images & labels.
-    for image_path in list(paths.list_images(data_dir)):
-        images.append(preprocess_image(image_path))
-        labels.append(image_path.split(os.path.sep)[-2])  # Extract label from path.
-        chars.append(df.loc[df[0] == image_path.split(os.path.sep)[-1].split('.')[0], 1].values[0].rstrip())
+#     for image_path in list(paths.list_images(data_dir)):
+#         images.append(preprocess_image(image_path))
+#         labels.append(image_path.split(os.path.sep)[-2])  # Extract label from path.
+#         chars.append(df.loc[df[0] == image_path.split(os.path.sep)[-1].split('.')[0], 1].values[0].rstrip())
         
+    print (images[0].shape) 
+    # Convert the data and labels lists to NumPy arrays.
+    images = np.array(images, dtype="float32")  # Convert images to a batch.
+    labels = np.array(labels)
+    chars = np.array(chars)
+
+    # Encode labels.
+    labels = encode_labels(labels, label_encoder)
+    chars = encode_labels(chars, LabelEncoder())
+
+    # return images, labels
+    return images, chars, labels
+
+def import_minimias_dataset_roi(data_dir: str, label_encoder) -> (np.ndarray, np.ndarray):
+    """
+    Import the dataset by pre-processing the images and encoding the labels.
+    :param data_dir: Directory to the mini-MIAS images.
+    :param label_encoder: The label encoder.
+    :return: Two NumPy arrays, one for the processed images and one for the encoded labels.
+    """
+    # Initialise variables.
+    images = list()
+    labels = list()
+    chars = list()
+    
+    df = pd.read_csv('/'.join(data_dir.split('/')[:-1]) + '/data_description.csv', header=None)
+    
+    for row in df.iterrows():
+        if (row[1][3] is not np.nan) & (row[1][4] is np.nan):
+            continue
+        
+        if (row[1][2] != 'NORM') & (row[1][4] == '*NO'):
+            continue
+        
+        image = load_img(data_dir + '/' + row[1][0] + '.png', color_mode="grayscale")
+        image = img_to_array(image)
+        image /= 255.0
+        
+        y2 = 0
+        x2 = 0
+    
+        if row[1][2] != 'NORM':
+            y1 = image.shape[1] - int(row[1][5]) - 112
+            if y1 < 0:
+                y1 = 0
+                y2 = 224
+            
+            if y2 != 224:
+                y2 = image.shape[1] - int(row[1][5]) + 112
+                if y2 > image.shape[1]:
+                    y2 = image.shape[1]
+                    y1 = image.shape[1] - 224
+
+            x1 = int(row[1][4]) - 112
+            if x1 < 0:
+                x1 = 0
+                x2 = 224
+
+            if x2 != 224:
+                x2 = int(row[1][4]) + 112
+                if x2 > image.shape[0]:
+                    x2 = image.shape[0]
+                    x1 = image.shape[0] - 224
+        else:
+            y1 = int(image.shape[1]/2 - 112)
+            y2 = int(image.shape[1]/2 + 112)
+            x1 = int(image.shape[0]/2 - 112)
+            x2 = int(image.shape[0]/2 + 112)
+        
+        images.append(image[y1:y2, x1:x2, :])
+        
+        label = 'normal'
+        if row[1][3] == 'B':
+            label = 'benign'
+        elif row[1][3] == 'M':
+            label = 'malignant'
+        labels.append(label)
+        
+        chars.append(row[1][1])
         
     # Convert the data and labels lists to NumPy arrays.
     images = np.array(images, dtype="float32")  # Convert images to a batch.

@@ -7,8 +7,8 @@ Variables set by the command line arguments dictating which parts of the program
 # Constants
 RANDOM_SEED = 111
 VGG_IMG_SIZE = {
-    "HEIGHT": 512,
-    "WIDTH": 512
+    "HEIGHT": 224,
+    "WIDTH": 224
 }
 VGG_IMG_SIZE_LARGE = {
     "HEIGHT": 2048,
