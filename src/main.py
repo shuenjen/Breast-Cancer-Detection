@@ -1,6 +1,6 @@
 # This file is contributed by Adam Jaamour, Ashay Patel, and Shuen-Jen Chen
 
-Cimport argparse
+import argparse
 import time
 import tensorflow as tf
 import numpy as np
@@ -42,8 +42,9 @@ def main() -> None:
         # Multiclass classification (mini-MIAS dataset)
         if config.dataset == "mini-MIAS":
             # Import entire dataset.
-            images, labels = import_minimias_dataset(data_dir="../data/{}/images_processed".format(config.dataset),
+            images, chars, labels = import_minimias_dataset(data_dir="../data/{}/images_processed".format(config.dataset),
                                                      label_encoder=l_e)
+            print(chars.shape)
 
             # Split dataset into training/test/validation sets (60%/20%/20% split).
             X_train, X_test, y_train, y_test = dataset_stratified_split(split=0.20, dataset=images, labels=labels)

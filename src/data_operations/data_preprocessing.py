@@ -9,6 +9,7 @@ import pandas as pd
 import skimage as sk
 import skimage.transform
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from tensorflow.keras.utils import to_categorical
 
@@ -25,20 +26,28 @@ def import_minimias_dataset(data_dir: str, label_encoder) -> (np.ndarray, np.nda
     # Initialise variables.
     images = list()
     labels = list()
+    chars = list()
+    
+    df = pd.read_csv('/'.join(data_dir.split('/')[:-1]) + '/data_description.csv', header=None)
 
     # Loop over the image paths and update the data and labels lists with the pre-processed images & labels.
     for image_path in list(paths.list_images(data_dir)):
         images.append(preprocess_image(image_path))
         labels.append(image_path.split(os.path.sep)[-2])  # Extract label from path.
-
+        chars.append(df.loc[df[0] == image_path.split(os.path.sep)[-1].split('.')[0], 1].values[0].rstrip())
+        
+        
     # Convert the data and labels lists to NumPy arrays.
     images = np.array(images, dtype="float32")  # Convert images to a batch.
     labels = np.array(labels)
+    chars = np.array(chars)
 
     # Encode labels.
     labels = encode_labels(labels, label_encoder)
+    chars = encode_labels(chars, LabelEncoder())
 
-    return images, labels
+    # return images, labels
+    return images, chars, labels
 
 
 def import_cbisddsm_training_dataset(label_encoder):
@@ -162,7 +171,7 @@ def generate_image_transforms(images, labels):
         indiv_class_images = [images[j] for j in indices]
 
         for k in range(int(to_add[i])):
-            a = create_individual_transform(indiv_class_images[k % len(indiv_class_images)], available_transforms)
+            # a = create_individual_transform(indiv_class_images[k % len(indiv_class_images)], available_transforms)
             transformed_image = create_individual_transform(indiv_class_images[k % len(indiv_class_images)],
                                                             available_transforms)
             transformed_image = transformed_image.reshape(1, config.VGG_IMG_SIZE['HEIGHT'],
