@@ -16,7 +16,7 @@ import config
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
-def generate_vgg_model_and_density(classes_len: int):
+def generate_vgg_model_advance_and_density(classes_len: int):
     """
     Function to create a VGG19 model pre-trained with custom FC Layers.
     If the "advanced" command line argument is selected, adds an extra convolutional layer with extra filters to support
@@ -26,13 +26,18 @@ def generate_vgg_model_and_density(classes_len: int):
     """
     # Reconfigure single channel input into a greyscale 3 channel input
     img_input = Input(shape=(config.VGG_IMG_SIZE['HEIGHT'], config.VGG_IMG_SIZE['WIDTH'], 1))
-    img_conc = Concatenate()([img_input, img_input, img_input])
 
-    # Generate a VGG19 model with pre-trained ImageNet weights, input as given above, excluded fully connected layers.
-    model_base = VGG19(include_top=False, weights='imagenet', input_tensor=img_conc)
-
-    # Add fully connected layers
+    # Add convolution and pooling layers
     model = Sequential()
+    model.add(img_input)
+    for i in range (0, config.CONV_CNT):
+        model.add(Conv2D(3, (3, 3),
+                         activation='relu',
+                         padding='same'))
+        model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+        
+    # Generate a VGG19 model with pre-trained ImageNet weights, input as given above, excluded fully connected layers.
+    model_base = VGG19(include_top=False, weights='imagenet')
     
     # Start with base model consisting of convolutional layers
     model.add(model_base)

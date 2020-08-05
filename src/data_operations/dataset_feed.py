@@ -18,11 +18,8 @@ def create_dataset(x, y):
     dataset_y = tf.data.Dataset.from_tensor_slices(y)
     dataset = tf.data.Dataset.zip((dataset_x, dataset_y))
     
-    # map values from dicom image path to array
-    if config.imagesize == "small":
-        dataset = dataset.map(parse_function_small, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    else:
-        dataset = dataset.map(parse_function_large, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    dataset = dataset.map(parse_function_small, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     # Dataset to cache data and repeat until all samples have been run once in each epoch
     dataset = dataset.cache().repeat(1)
@@ -44,9 +41,10 @@ def parse_function_small(dataset, label):
     image = tfio.image.decode_dicom_image(image_bytes, color_dim=True, scale="auto", dtype=tf.uint16)
     as_png = tf.image.encode_png(image[0])
     decoded_png = tf.io.decode_png(as_png, channels=1)
-    image = tf.image.resize(decoded_png, [config.VGG_IMG_SIZE['HEIGHT'], config.VGG_IMG_SIZE['HEIGHT']])
+    # image = tf.image.resize(decoded_png, [config.VGG_IMG_SIZE['HEIGHT'], config.VGG_IMG_SIZE['HEIGHT']])
+    image = tf.image.resize_with_pad(decoded_png, config.VGG_IMG_SIZE['HEIGHT'], config.VGG_IMG_SIZE['WIDTH'])
     image /= 255
-
+    
     return (image, features), label
 
 

@@ -4,18 +4,20 @@ import argparse
 import time
 import tensorflow as tf
 import numpy as np
+from datetime import datetime
 
 import config
 from data_operations.dataset_feed import create_dataset
-from data_operations.data_preprocessing import import_cbisddsm_training_dataset, import_minimias_dataset, \
-    dataset_stratified_split, generate_image_transforms, import_minimias_dataset_roi
+from data_operations.data_preprocessing import import_cbisddsm_training_dataset, import_cbisddsm_testing_dataset, import_minimias_dataset, \
+    dataset_stratified_split, generate_image_transforms, import_minimias_dataset_roi, generate_image_transforms_upsample, generate_image_transforms_downsample
 from data_visualisation.output import evaluate
 from model.train_test_model import make_predictions, train_network
 from model.vgg_model import generate_vgg_model
+from model.vgg_model_advance import generate_vgg_model_advance
 from model.vgg_model_add_density import generate_vgg_model_and_density
+from model.vgg_model_advance_add_density import generate_vgg_model_advance_and_density
 from model.resnet_model import generate_resnet_model
 from model.resnet_model_add_density import generate_resnet_model_and_density
-from model.vgg_model_large import generate_vgg_model_large
 from utils import create_label_encoder, print_error_message, print_num_gpus_available, print_runtime, print_config
 from tensorflow.keras.models import load_model
 
@@ -42,28 +44,61 @@ def main() -> None:
         # Multiclass classification (mini-MIAS dataset)
         if config.dataset == "mini-MIAS":
             # Import entire dataset.
-            images, chars, labels = import_minimias_dataset_roi(data_dir="../data/{}/images".format(config.dataset),
+            images, chars, labels = import_minimias_dataset(data_dir="../data/{}/images".format(config.dataset),
                                                      label_encoder=l_e)
             
             # Split dataset into training/test/validation sets (60%/20%/20% split).
             X_train, X_test, y_train, y_test = dataset_stratified_split(split=0.20, dataset=images, labels=labels)
-            X_train_rebalanced, y_train_rebalanced = generate_image_transforms(X_train, y_train)
-            X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X_train_rebalanced,
-                                                                      labels=y_train_rebalanced)
+            X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X_train, labels=y_train)
+            
+            if config.SAMPLING == 'x':
+                X_train_rebalanced = X_train
+                y_train_rebalanced = y_train
+            else:
+                print (len(y_train))
+                print (l_e.classes_)
+                print (y_train.sum(axis=0))
+
+                if len(config.CLASS_TYPE.split('-')) == 2:
+                    if config.SAMPLING == 'up':
+                        X_train_rebalanced, y_train_rebalanced = generate_image_transforms_upsample(X_train, y_train)
+                    elif config.SAMPLING == 'down':
+                        X_train_rebalanced, y_train_rebalanced = generate_image_transforms_downsample(X_train, y_train)
+
+                if len(config.CLASS_TYPE.split('-')) != 2 and config.SAMPLING == 'up':
+                    X_train_rebalanced, y_train_rebalanced = generate_image_transforms(X_train, y_train)
+                    
+                print (len(y_train_rebalanced))
+                print (l_e.classes_)
+                print (y_train_rebalanced.sum(axis=0))
+            
             # Create and train CNN model.
             if config.cnn == "ResNet":
                 model = generate_resnet_model(l_e.classes_.size)
             elif config.cnn == "VGG":
-                model = generate_vgg_model(l_e.classes_.size)
+                if config.model == 'basic':
+                    model = generate_vgg_model(l_e.classes_.size)
+                else:
+                    model = generate_vgg_model_advance(l_e.classes_.size)
             
-            model = train_network(model, X_train, y_train, X_val, y_val, config.BATCH_SIZE, config.EPOCH_1,
+            model = train_network(l_e.classes_.size, model, X_train_rebalanced, y_train_rebalanced, X_val, y_val, config.BATCH_SIZE, config.EPOCH_1,
                                   config.EPOCH_2)
 
         # Binary classification (CBIS-DDSM dataset).
         elif config.dataset == "CBIS-DDSM":
             images, labels, density, cc, mlo = import_cbisddsm_training_dataset(l_e)
+            images_test, labels_test, density_test, cc_test, mlo_test = import_cbisddsm_testing_dataset(l_e)
             
-            X = np.vstack((images, density, cc, mlo))
+            if len(config.model.split('-')) > 1 and config.model.split('-')[1] == '3':
+                X = np.vstack((images, density, cc, mlo))
+                X_test = np.vstack((images_test, density_test, cc_test, mlo_test))
+                X_test = X_test.transpose()
+            else:
+                X = np.vstack((images, density))
+                X_test = np.vstack((images_test, density_test))
+                X_test = X_test.transpose()
+                
+            y_test = labels_test
             
             # Split training dataset into training/validation sets (75%/25% split).
             X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X.transpose(), labels=labels)
@@ -71,43 +106,67 @@ def main() -> None:
             
             dataset_train = create_dataset(X_train, y_train)
             dataset_val = create_dataset(X_val, y_val)
+            dataset_test = create_dataset(X_test, y_test)
             
             # Create and train CNN model.
             if config.cnn == "ResNet":
-                # model = generate_resnet_model(l_e.classes_.size)
-                model = generate_resnet_model_and_density(l_e.classes_.size)
+                if len(config.model.split('-')) == 1:
+                    model = generate_resnet_model(l_e.classes_.size)
+                else:
+                    model = generate_resnet_model_and_density(l_e.classes_.size)
 
             elif config.cnn == "VGG":
-                if config.imagesize == "small":
-                    model = generate_vgg_model_and_density(l_e.classes_.size)
+                if config.model.startswith('basic'):
+                    if len(config.model.split('-')) == 1:
+                        model = generate_vgg_model(l_e.classes_.size)
+                    else:
+                        model = generate_vgg_model_and_density(l_e.classes_.size)
                 else:
-                    model = generate_vgg_model_large(l_e.classes_.size)
-            
-            model = train_network(model, dataset_train, None, dataset_val, None, config.BATCH_SIZE, config.EPOCH_1,
-                                  config.EPOCH_2)
+                    if len(config.model.split('-')) == 1:
+                        model = generate_vgg_model_advance(l_e.classes_.size)
+                    else:
+                        model = generate_vgg_model_advance_and_density(l_e.classes_.size)
+                    
+            model = train_network(l_e.classes_.size, model, dataset_train, None, dataset_val, None, config.BATCH_SIZE, config.EPOCH_1, config.EPOCH_2)
 
         else:
             print_error_message()
 
         try:
             # Save the model
-            model.save_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_imagesize-{}.h5".format(config.dataset, config.model, config.cnn, config.imagesize))
+            # model.save("../saved_models/dataset-{}_model-{}-{}_" + datetime.now().strftime("%d%Y%H%M%S") + ".h5".format(config.dataset, config.model, config.cnn))
+            save_time = datetime.now().strftime("%Y%m%d%H%M")
+            model.save_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_{}.h5".format(config.dataset, config.model, config.cnn, save_time))
         except:
             print ('save model error: ' + sys.exc_info()[0])
 
     elif config.run_mode == "test":
-        model.load_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_imagesize-{}.h5".format(config.dataset, config.model, config.cnn, config.imagesize))
+        model.load("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_{}.h5".format(config.dataset, config.model, config.cnn, config.MODEL_SAVE_TIME))
 
     # print config
     print_config()
+    print ('save_time: ', save_time)
+    print_runtime("Finish Training", round(time.time() - start_time, 2))
 
     # Evaluate model results.
     if config.dataset == "mini-MIAS":
-        y_pred = make_predictions(model, X_val)
-        evaluate(y_val, y_pred, l_e, config.dataset, 'N-B-M')
+        if config.run_mode == "train":
+            y_pred = make_predictions(model, X_val)
+            evaluate(y_val, y_pred, l_e, config.dataset, config.CLASS_TYPE, 'output')
+            print_runtime("Finish Prediction Validation Set", round(time.time() - start_time, 2))
+        elif config.run_mode == "test":
+            y_pred_test = make_predictions(model, X_test)
+            evaluate(y_test, y_pred_test, l_e, config.dataset, config.CLASS_TYPE, 'output_test')
+            print_runtime("Finish Prediction Testing Set", round(time.time() - start_time, 2))
     elif config.dataset == "CBIS-DDSM":
-        y_pred = make_predictions(model, dataset_val)
-        evaluate(y_val, y_pred, l_e, config.dataset, 'B-M')
+        if config.run_mode == "train":
+            y_pred = make_predictions(model, dataset_val)
+            evaluate(y_val, y_pred, l_e, config.dataset, config.CLASS_TYPE, 'output')
+            print_runtime("Finish Prediction Validation Set", round(time.time() - start_time, 2))
+        elif config.run_mode == "test":
+            y_pred_test = make_predictions(model, dataset_test)
+            evaluate(y_test, y_pred_test, l_e, config.dataset, config.CLASS_TYPE, 'output_test')
+            print_runtime("Finish Prediction Testing Set", round(time.time() - start_time, 2))
 
     # Print the prediction
     # print(y_pred)
@@ -141,10 +200,6 @@ def parse_command_line_arguments() -> None:
                         help="Running mode: train model from scratch and make predictions, otherwise load pre-trained "
                              "model for predictions. Must be either 'train' or 'test'."
                         )
-    parser.add_argument("-i", "--imagesize",
-                        default="small",
-                        help="small: use resized images to 512x512, otherwise use 'large' to use 2048x2048 size image with model with extra convolutions for downsizing."
-                        )
     parser.add_argument("-v", "--verbose",
                         action="store_true",
                         help="Verbose mode: include this flag additional print statements for debugging purposes."
@@ -155,7 +210,6 @@ def parse_command_line_arguments() -> None:
     config.cnn = args.cnn
     config.model = args.model
     config.run_mode = args.runmode
-    config.imagesize = args.imagesize
     config.verbose_mode = args.verbose
     
 
