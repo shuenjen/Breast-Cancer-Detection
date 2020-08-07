@@ -18,7 +18,6 @@ def create_dataset(x, y):
     dataset_y = tf.data.Dataset.from_tensor_slices(y)
     dataset = tf.data.Dataset.zip((dataset_x, dataset_y))
     
-    
     dataset = dataset.map(parse_function_small, num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
     # Dataset to cache data and repeat until all samples have been run once in each epoch

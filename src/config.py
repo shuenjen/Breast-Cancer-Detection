@@ -24,21 +24,21 @@ EPOCH_1 = 150
 EPOCH_2 = 50
 
 # mini-MIAS
-# CONV_CNT = 0
-# DROPOUT = 0
-# SAMPLING = "up"
-# SAMPLING_TIMES = 1
+CONV_CNT = 2
+DROPOUT = 0
+SAMPLING = "up"
+SAMPLING_TIMES = 1
+CLASS_WEIGHT = "1:2"
+CLASS_TYPE = "N-A"
+
+# CBIS-DDSM
+# CONV_CNT = 2
+# DROPOUT = 0.2
+# SAMPLING = "x"
 # CLASS_WEIGHT = "x"
 # CLASS_TYPE = "B-M"
 
-# CBIS-DDSM
-CONV_CNT = 2
-DROPOUT = 0.5
-SAMPLING = "x"
-CLASS_WEIGHT = "x"
-CLASS_TYPE = "B-M"
-
-MODEL_SAVE_TIME=202008051516
+MODEL_SAVE_TIME=202008040513
 
 # Variables set by command line arguments/flags
 dataset = "mini-MIAS"   # The dataset to use.

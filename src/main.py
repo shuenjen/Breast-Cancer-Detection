@@ -4,6 +4,7 @@ import argparse
 import time
 import tensorflow as tf
 import numpy as np
+import sys
 from datetime import datetime
 
 import config
@@ -17,7 +18,9 @@ from model.vgg_model_advance import generate_vgg_model_advance
 from model.vgg_model_add_density import generate_vgg_model_and_density
 from model.vgg_model_advance_add_density import generate_vgg_model_advance_and_density
 from model.resnet_model import generate_resnet_model
+from model.resnet_model_advance import generate_resnet_model_advance
 from model.resnet_model_add_density import generate_resnet_model_and_density
+from model.resnet_model_advance_add_density import generate_resnet_model_advance_and_density
 from utils import create_label_encoder, print_error_message, print_num_gpus_available, print_runtime, print_config
 from tensorflow.keras.models import load_model
 
@@ -38,115 +41,129 @@ def main() -> None:
     # Create label encoder.
     l_e = create_label_encoder()
 
-    # Run in training mode.
-    if config.run_mode == "train":
+    # Multiclass classification (mini-MIAS dataset)
+    if config.dataset == "mini-MIAS":
+        # Import entire dataset.
+        images, chars, labels = import_minimias_dataset(data_dir="../data/{}/images".format(config.dataset),
+                                                 label_encoder=l_e)
 
-        # Multiclass classification (mini-MIAS dataset)
-        if config.dataset == "mini-MIAS":
-            # Import entire dataset.
-            images, chars, labels = import_minimias_dataset(data_dir="../data/{}/images".format(config.dataset),
-                                                     label_encoder=l_e)
-            
-            # Split dataset into training/test/validation sets (60%/20%/20% split).
-            X_train, X_test, y_train, y_test = dataset_stratified_split(split=0.20, dataset=images, labels=labels)
-            X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X_train, labels=y_train)
-            
-            if config.SAMPLING == 'x':
-                X_train_rebalanced = X_train
-                y_train_rebalanced = y_train
-            else:
-                print (len(y_train))
-                print (l_e.classes_)
-                print (y_train.sum(axis=0))
+        # Split dataset into training/test/validation sets (60%/20%/20% split).
+        X_train, X_test, y_train, y_test = dataset_stratified_split(split=0.20, dataset=images, labels=labels)
+        X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X_train, labels=y_train)
 
-                if len(config.CLASS_TYPE.split('-')) == 2:
-                    if config.SAMPLING == 'up':
-                        X_train_rebalanced, y_train_rebalanced = generate_image_transforms_upsample(X_train, y_train)
-                    elif config.SAMPLING == 'down':
-                        X_train_rebalanced, y_train_rebalanced = generate_image_transforms_downsample(X_train, y_train)
+        if config.SAMPLING == 'x':
+            X_train_rebalanced = X_train
+            y_train_rebalanced = y_train
+        else:
+            print (len(y_train))
+            print (l_e.classes_)
+            print (y_train.sum(axis=0))
 
-                if len(config.CLASS_TYPE.split('-')) != 2 and config.SAMPLING == 'up':
-                    X_train_rebalanced, y_train_rebalanced = generate_image_transforms(X_train, y_train)
-                    
-                print (len(y_train_rebalanced))
-                print (l_e.classes_)
-                print (y_train_rebalanced.sum(axis=0))
-            
-            # Create and train CNN model.
-            if config.cnn == "ResNet":
+            if len(config.CLASS_TYPE.split('-')) == 2:
+                if config.SAMPLING == 'up':
+                    X_train_rebalanced, y_train_rebalanced = generate_image_transforms_upsample(X_train, y_train)
+                elif config.SAMPLING == 'down':
+                    X_train_rebalanced, y_train_rebalanced = generate_image_transforms_downsample(X_train, y_train)
+
+            if len(config.CLASS_TYPE.split('-')) != 2 and config.SAMPLING == 'up':
+                X_train_rebalanced, y_train_rebalanced = generate_image_transforms(X_train, y_train)
+
+            print (len(y_train_rebalanced))
+            print (l_e.classes_)
+            print (y_train_rebalanced.sum(axis=0))
+
+        # Create and train CNN model.
+        if config.cnn == "ResNet":
+            if config.model == 'basic':
                 model = generate_resnet_model(l_e.classes_.size)
-            elif config.cnn == "VGG":
-                if config.model == 'basic':
-                    model = generate_vgg_model(l_e.classes_.size)
-                else:
-                    model = generate_vgg_model_advance(l_e.classes_.size)
-            
+        elif config.cnn == "VGG":
+            if config.model == 'basic':
+                model = generate_vgg_model(l_e.classes_.size)
+            else:
+                model = generate_vgg_model_advance(l_e.classes_.size)
+        
+        if config.run_mode == "train":
             model = train_network(l_e.classes_.size, model, X_train_rebalanced, y_train_rebalanced, X_val, y_val, config.BATCH_SIZE, config.EPOCH_1,
-                                  config.EPOCH_2)
+                              config.EPOCH_2)
 
-        # Binary classification (CBIS-DDSM dataset).
-        elif config.dataset == "CBIS-DDSM":
-            images, labels, density, cc, mlo = import_cbisddsm_training_dataset(l_e)
-            images_test, labels_test, density_test, cc_test, mlo_test = import_cbisddsm_testing_dataset(l_e)
-            
-            if len(config.model.split('-')) > 1 and config.model.split('-')[1] == '3':
+    # Binary classification (CBIS-DDSM dataset).
+    elif config.dataset == "CBIS-DDSM":
+        images, labels, density, cc, mlo = import_cbisddsm_training_dataset(l_e)
+        images_test, labels_test, density_test, cc_test, mlo_test = import_cbisddsm_testing_dataset(l_e)
+
+        if len(config.model.split('-')) > 1 and config.model.split('-')[1] == '3':
+            if config.run_mode == "train":
                 X = np.vstack((images, density, cc, mlo))
+            elif config.run_mode == "test":
                 X_test = np.vstack((images_test, density_test, cc_test, mlo_test))
                 X_test = X_test.transpose()
-            else:
+        else:
+            if config.run_mode == "train":
                 X = np.vstack((images, density))
+            elif config.run_mode == "test":
                 X_test = np.vstack((images_test, density_test))
                 X_test = X_test.transpose()
-                
+        
+        if config.run_mode == "test":
             y_test = labels_test
-            
+
+        if config.run_mode == "train":
             # Split training dataset into training/validation sets (75%/25% split).
             X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=X.transpose(), labels=labels)
             # X_train, X_val, y_train, y_val = dataset_stratified_split(split=0.25, dataset=images, labels=labels)
-            
+
+        if config.run_mode == "train":
             dataset_train = create_dataset(X_train, y_train)
             dataset_val = create_dataset(X_val, y_val)
+        elif config.run_mode == "test":
             dataset_test = create_dataset(X_test, y_test)
-            
-            # Create and train CNN model.
-            if config.cnn == "ResNet":
+
+        # Create and train CNN model.
+        if config.cnn == "ResNet":
+            if config.model.startswith('basic'):
                 if len(config.model.split('-')) == 1:
                     model = generate_resnet_model(l_e.classes_.size)
                 else:
                     model = generate_resnet_model_and_density(l_e.classes_.size)
-
-            elif config.cnn == "VGG":
-                if config.model.startswith('basic'):
-                    if len(config.model.split('-')) == 1:
-                        model = generate_vgg_model(l_e.classes_.size)
-                    else:
-                        model = generate_vgg_model_and_density(l_e.classes_.size)
+            else:
+                if len(config.model.split('-')) == 1:
+                    model = generate_resnet_model_advance(l_e.classes_.size)
                 else:
-                    if len(config.model.split('-')) == 1:
-                        model = generate_vgg_model_advance(l_e.classes_.size)
-                    else:
-                        model = generate_vgg_model_advance_and_density(l_e.classes_.size)
-                    
+                    model = generate_resnet_model_advance_and_density(l_e.classes_.size)
+
+        elif config.cnn == "VGG":
+            if config.model.startswith('basic'):
+                if len(config.model.split('-')) == 1:
+                    model = generate_vgg_model(l_e.classes_.size)
+                else:
+                    model = generate_vgg_model_and_density(l_e.classes_.size)
+            else:
+                if len(config.model.split('-')) == 1:
+                    model = generate_vgg_model_advance(l_e.classes_.size)
+                else:
+                    model = generate_vgg_model_advance_and_density(l_e.classes_.size)
+
+        if config.run_mode == "train":
             model = train_network(l_e.classes_.size, model, dataset_train, None, dataset_val, None, config.BATCH_SIZE, config.EPOCH_1, config.EPOCH_2)
 
-        else:
-            print_error_message()
-
-        try:
-            # Save the model
-            # model.save("../saved_models/dataset-{}_model-{}-{}_" + datetime.now().strftime("%d%Y%H%M%S") + ".h5".format(config.dataset, config.model, config.cnn))
+    else:
+        print_error_message()
+    
+    try:
+        # Save the model
+        # model.save("../saved_models/dataset-{}_model-{}-{}_" + datetime.now().strftime("%d%Y%H%M%S") + ".h5".format(config.dataset, config.model, config.cnn))
+        if config.run_mode == "train":
             save_time = datetime.now().strftime("%Y%m%d%H%M")
             model.save_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_{}.h5".format(config.dataset, config.model, config.cnn, save_time))
-        except:
-            print ('save model error: ' + sys.exc_info()[0])
-
-    elif config.run_mode == "test":
-        model.load("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_{}.h5".format(config.dataset, config.model, config.cnn, config.MODEL_SAVE_TIME))
+            print ('save_time: ', save_time)
+            print_runtime("Finish Training", round(time.time() - start_time, 2))
+        elif config.run_mode == "test":
+            model.load_weights("/cs/tmp/sjc29/saved_models/dataset-{}_model-{}-{}_{}.h5".format(config.dataset, config.model, config.cnn, config.MODEL_SAVE_TIME))
+    except:
+        print ('save/load model error: ' + sys.exc_info()[0])
 
     # print config
     print_config()
-    print ('save_time: ', save_time)
-    print_runtime("Finish Training", round(time.time() - start_time, 2))
 
     # Evaluate model results.
     if config.dataset == "mini-MIAS":

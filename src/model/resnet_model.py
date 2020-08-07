@@ -33,31 +33,23 @@ def generate_resnet_model(classes_len: int):
     # Start with base model consisting of convolutional layers
     model.add(model_base)
 
-    # Generate additional convolutional layers
-    if config.model == "advanced":
-        model.add(Conv2D(1024, (3, 3),
-                         activation='relu',
-                         padding='same'))
-        model.add(Conv2D(1024, (3, 3),
-                         activation='relu',
-                         padding='same'))
-        model.add(MaxPooling2D((2, 2), strides=(2, 2)))
-
     # Flatten layer to convert each input into a 1D array (no parameters in this layer, just simple pre-processing).
     model.add(Flatten())
     
-    # Add fully connected hidden layers.
-    model.add(Dense(units=512, activation='relu', name='Dense_Intermediate_1'))
-    model.add(Dense(units=32, activation='relu', name='Dense_Intermediate_2'))
-
     # Possible dropout for regularisation can be added later and experimented with:
-    # model.add(Dropout(0.1, name='Dropout_Regularization'))
+    if config.DROPOUT != 0:
+        model.add(Dropout(config.DROPOUT, name='Dropout_Regularization_1'))
+
+    # Add fully connected hidden layers.
+    model.add(Dense(units=512, activation='relu', kernel_initializer='random_uniform', name='Dense_Intermediate_1'))
+    
+    model.add(Dense(units=32, activation='relu', kernel_initializer='random_uniform', name='Dense_Intermediate_2'))
 
     # Final output layer that uses softmax activation function (because the classes are exclusive).
     if classes_len == 2:
-        model.add(Dense(1, activation='sigmoid', name='Output'))
+        model.add(Dense(1, activation='sigmoid', kernel_initializer='random_uniform', name='Output'))
     else:
-        model.add(Dense(classes_len, activation='softmax', name='Output'))
+        model.add(Dense(classes_len, kernel_initializer='random_uniform', activation='softmax', name='Output'))
 
     # Print model details if running in debug mode.
     if config.verbose_mode:

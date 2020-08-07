@@ -172,11 +172,13 @@ def import_cbisddsm_training_dataset(label_encoder):
     :return: Two arrays, one for the image paths and one for the encoded labels.
     """
     df = pd.read_csv("../data/CBIS-DDSM/training.csv")
+    # df = df[df['img'].str.endswith('_MLO')]
     list_IDs = df['img_path'].values
     labels = encode_labels(df['label'].values, label_encoder)
     density = df['breast_density'].values
     cc = df['img'].map(lambda row: 1 if 'CC' in row else 0).values
     mlo = df['img'].map(lambda row: 1 if 'MLO' in row else 0).values
+    # print (np.unique(cc), np.unique(mlo))
     return list_IDs, labels, density, cc, mlo
 
 def import_cbisddsm_testing_dataset(label_encoder):
@@ -186,11 +188,13 @@ def import_cbisddsm_testing_dataset(label_encoder):
     :return: Two arrays, one for the image paths and one for the encoded labels.
     """
     df = pd.read_csv("../data/CBIS-DDSM/testing.csv")
+    # df = df[df['img'].str.endswith('_MLO')]
     list_IDs = df['img_path'].values
     labels = label_encoder.transform(df['label'].values)
     density = df['breast_density'].values
     cc = df['img'].map(lambda row: 1 if 'CC' in row else 0).values
     mlo = df['img'].map(lambda row: 1 if 'MLO' in row else 0).values
+    # print (np.unique(cc), np.unique(mlo))
     return list_IDs, labels, density, cc, mlo
 
 def preprocess_image(image_path: str) -> np.ndarray:
