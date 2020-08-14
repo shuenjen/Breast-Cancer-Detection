@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, and Shuen-Jen Chen
+
 import os
 
 import pandas as pd
@@ -48,11 +50,18 @@ def main() -> None:
                  'Mass-Test': 'mass_case_description_test_set.csv',
                  'Mass-Training': 'mass_case_description_train_set.csv'}
 
+    df_dict = {}
+    
     for t in type_dict.keys():  # handle images based on the type
         df_subset = df[df['img'].str.startswith(t)]
 
-        df_csv = pd.read_csv(csv_root + '/' + type_dict[t],
-                             usecols=['pathology', 'image file path'])  # read original csv file
+        if 'Calc' in t:
+            df_csv = pd.read_csv(csv_root + '/' + type_dict[t],
+                                 usecols=['pathology', 'breast density', 'image file path'])  # read original csv file
+        else:
+            df_csv = pd.read_csv(csv_root + '/' + type_dict[t],
+                                 usecols=['pathology', 'breast_density', 'image file path'])  # read original csv file
+            
         df_csv['img'] = df_csv.apply(lambda row: row['image file path'].split('/')[0],
                                      axis=1)  # extract image id from the path
         df_csv['pathology'] = df_csv.apply(
@@ -69,15 +78,24 @@ def main() -> None:
 
         df_subset_new = pd.merge(df_subset, df_csv, how='inner',
                                  on='img')  # merge image path and image pathology on image id
-        df_subset_new = df_subset_new.rename(columns={'pathology': 'label'})  # rename column 'pathology' to 'label'
+        df_subset_new = df_subset_new.rename(columns={'pathology': 'label', 'breast density': 'breast_density'})  # rename column 'pathology' to 'label'
         df_subset_new.to_csv(csv_output_path + '/' + t.lower() + '.csv',
                              index=False)  # output merged dataframe in csv format
-
+                
+        df_dict[t] = df_subset_new
+        
         print(t)
         print('data_cnt: %d' % len(df_subset_new))
         print('multi pathology case:')
         print(list(df_cnt[df_cnt['pathology'] != 1]['img']))
         print()
+        
+    df_train = pd.concat([df_dict['Calc-Training'], df_dict['Mass-Training']], axis=0)
+    df_train.to_csv(csv_output_path + '/training.csv',
+                             index=False)
+    df_test = pd.concat([df_dict['Calc-Test'], df_dict['Mass-Test']], axis=0)
+    df_test.to_csv(csv_output_path + '/testing.csv',
+                             index=False)
 
     print('Finished pre-processing CSV for the CBIS-DDSM dataset.')
 

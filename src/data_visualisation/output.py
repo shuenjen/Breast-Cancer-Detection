@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour, Ashay Patel, and Shuen-Jen Chen
+
 import json
 
 import matplotlib.pyplot as plt
@@ -10,7 +12,7 @@ from sklearn.preprocessing import LabelEncoder
 import config
 
 
-def plot_roc_curve_binary(y_true: list, y_pred: list) -> None:
+def plot_roc_curve_binary(y_true: list, y_pred: list, ouput_dir: str) -> None:
     """
     Plot ROC curve for binary classification.
     :param y_true: Ground truth of the data in one-hot-encoding type.
@@ -35,11 +37,11 @@ def plot_roc_curve_binary(y_true: list, y_pred: list) -> None:
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic')
     plt.legend(loc='lower right')
-    plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_ROC-binary.png".format(config.dataset, config.model, config.imagesize))
+    plt.savefig("../" + ouput_dir + "/dataset-{}_model-{}_ROC-binary.png".format(config.dataset, config.model))
     plt.show()
 
 
-def plot_roc_curve_multiclass(y_true: list, y_pred: list, label_encoder) -> None:
+def plot_roc_curve_multiclass(y_true: list, y_pred: list, label_encoder, ouput_dir: str) -> None:
     """
     Plot ROC curve for multi classification.
 
@@ -108,11 +110,11 @@ def plot_roc_curve_multiclass(y_true: list, y_pred: list, label_encoder) -> None
     plt.ylabel('True Positive Rate')
     plt.title('Receiver Operating Characteristic')
     plt.legend(loc='lower right')
-    plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_ROC-multi.png".format(config.dataset, config.model, config.imagesize))
+    plt.savefig("../" + ouput_dir + "/dataset-{}_model-{}_ROC-multi.png".format(config.dataset, config.model))
     plt.show()
 
 
-def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised: bool) -> None:
+def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised: bool, ouput_dir: str) -> None:
     """
     Plot confusion matrix.
     :param cm: Confusion matrix array.
@@ -124,12 +126,14 @@ def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised
     title = str()
     if is_normalised:
         title = "Confusion Matrix Normalised"
+        vmax = 1
     elif not is_normalised:
         title = "Confusion Matrix"
+        vmax = np.max(cm.sum(axis=1))
 
     # Plot.
     fig, ax = plt.subplots(figsize=(6, 4))
-    sns.heatmap(cm, annot=True, ax=ax, fmt=fmt, cmap=plt.cm.Blues)  # annot=True to annotate cells
+    sns.heatmap(cm, annot=True, ax=ax, fmt=fmt, cmap=plt.cm.Blues, vmin=0, vmax=vmax)  # annot=True to annotate cells
 
     # Set labels, title, ticks and axis range.
     ax.set_xlabel('Predicted classes')
@@ -139,15 +143,14 @@ def plot_confusion_matrix(cm: np.ndarray, fmt: str, label_encoder, is_normalised
     ax.yaxis.set_ticklabels(label_encoder.classes_)
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0, ha='right', rotation_mode='anchor')
     plt.tight_layout()
-    bottom, top = ax.get_ylim()
     if is_normalised:
-        plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_CM-norm.png".format(config.dataset, config.model, config.imagesize))
+        plt.savefig("../" + ouput_dir + "/dataset-{}_model-{}_CM-norm.png".format(config.dataset, config.model))
     elif not is_normalised:
-        plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_CM.png".format(config.dataset, config.model, config.imagesize))
+        plt.savefig("../" + ouput_dir + "/dataset-{}_model-{}_CM.png".format(config.dataset, config.model))
     plt.show()
 
 
-def plot_comparison_chart(df: pd.DataFrame) -> None:
+def plot_comparison_chart(df: pd.DataFrame, ouput_dir: str) -> None:
     """
     Plot comparison bar chart.
     :param df: Compare data from json file.
@@ -168,11 +171,11 @@ def plot_comparison_chart(df: pd.DataFrame) -> None:
     plt.title(title)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=60, ha='right', rotation_mode='anchor')
     plt.tight_layout()
-    plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_{}.png".format(config.dataset, config.model, config.imagesize, title), bbox_inches='tight')
+    plt.savefig("../" + ouput_dir + "/dataset-{}_model-{}_{}.png".format(config.dataset, config.model, title), bbox_inches='tight')
     plt.show()
 
 
-def evaluate(y_true: list, y_pred: list, label_encoder: LabelEncoder, dataset: str, classification_type: str):
+def evaluate(y_true: list, y_pred: list, label_encoder: LabelEncoder, dataset: str, classification_type: str, ouput_dir: str):
     """
     Evaluate model performance with accuracy, confusion matrix, ROC curve and compare with other papers' results.
     :param y_true: Ground truth of the data in one-hot-encoding type.
@@ -200,17 +203,17 @@ def evaluate(y_true: list, y_pred: list, label_encoder: LabelEncoder, dataset: s
 
     # Plot confusion matrix and normalised confusion matrix.
     cm = confusion_matrix(y_true_inv, y_pred_inv)  # calculate confusion matrix with original label of classes
-    plot_confusion_matrix(cm, 'd', label_encoder, False)
+    plot_confusion_matrix(cm, 'd', label_encoder, False, ouput_dir)
     # Calculate normalized confusion matrix with original label of classes.
     cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
     cm_normalized[np.isnan(cm_normalized)] = 0
-    plot_confusion_matrix(cm_normalized, '.2f', label_encoder, True)
+    plot_confusion_matrix(cm_normalized, '.2f', label_encoder, True, ouput_dir)
 
     # Plot ROC curve.
     if label_encoder.classes_.size == 2:  # binary classification
-        plot_roc_curve_binary(y_true, y_pred)
+        plot_roc_curve_binary(y_true, y_pred, ouput_dir)
     elif label_encoder.classes_.size >= 2:  # multi classification
-        plot_roc_curve_multiclass(y_true, y_pred, label_encoder)
+        plot_roc_curve_multiclass(y_true, y_pred, label_encoder, ouput_dir)
 
     # Compare our results with other papers' result.
     with open('data_visualisation/other_paper_results.json') as config_file:  # load other papers' result from json file
@@ -221,34 +224,58 @@ def evaluate(y_true: list, y_pred: list, label_encoder: LabelEncoder, dataset: s
                            index=[0])  # Add model result into dataframe to compare.
     df = pd.concat([new_row, df]).reset_index(drop=True)
     df['accuracy'] = pd.to_numeric(df['accuracy'])  # Digitize the accuracy column.
-    plot_comparison_chart(df)
+    plot_comparison_chart(df, ouput_dir)
 
 
-def plot_training_results(hist_input, plot_name: str, is_frozen_layers) -> None:
+def plot_training_results(classes_len: int, hist_input, plot_name: str, is_frozen_layers) -> None:
     """
     Function to plot loss and accuracy over epoch count for training
     :param is_frozen_layers: Boolean controlling whether some layers are frozen (for the plot title).
     :param hist_input: The training history.
     :param plot_name: The plot name.
     """
-    title = "Training Loss and Accuracy on Dataset"
+
+    title = "Training Loss on Dataset"
     if not is_frozen_layers:
         title += " (all layers unfrozen)"
 
+    fig = plt.figure() 
     n = len(hist_input.history["loss"])
     plt.style.use("ggplot")
     plt.figure()
     plt.plot(np.arange(0, n), hist_input.history["loss"], label="train_loss")
     plt.plot(np.arange(0, n), hist_input.history["val_loss"], label="val_loss")
-    if config.dataset == "mini-MIAS":
-        plt.plot(np.arange(0, n), hist_input.history["categorical_accuracy"], label="train_acc")
-        plt.plot(np.arange(0, n), hist_input.history["val_categorical_accuracy"], label="val_acc")
-    elif config.dataset == "CBIS-DDSM":
-        plt.plot(np.arange(0, n), hist_input.history["binary_accuracy"], label="train_acc")
-        plt.plot(np.arange(0, n), hist_input.history["val_loss"], label="val_loss")
     plt.title(title)
     plt.xlabel("Epoch #")
-    plt.ylabel("Loss/Accuracy")
-    plt.legend(loc="lower left")
-    plt.savefig("../output/dataset-{}_model-{}_imagesize-{}_{}.png".format(config.dataset, config.model, config.imagesize, plot_name))
+    plt.ylabel("Loss")
+    # plt.ylim(0, 1.5)
+    plt.legend(loc="upper left")
+    plt.savefig("../output/dataset-{}_model-{}_{}-Loss.png".format(config.dataset, config.model, plot_name))
+    plt.show()
+    
+    title = "Training Accuracy on Dataset"
+    if not is_frozen_layers:
+        title += " (all layers unfrozen)"
+
+    fig = plt.figure() 
+    n = len(hist_input.history["loss"])
+    plt.style.use("ggplot")
+    plt.figure()
+    
+    if config.dataset == "mini-MIAS":
+        if classes_len == 2:
+            plt.plot(np.arange(0, n), hist_input.history["binary_accuracy"], label="train_acc")
+            plt.plot(np.arange(0, n), hist_input.history["val_binary_accuracy"], label="val_acc")
+        else:
+            plt.plot(np.arange(0, n), hist_input.history["categorical_accuracy"], label="train_acc")
+            plt.plot(np.arange(0, n), hist_input.history["val_categorical_accuracy"], label="val_acc")
+    elif config.dataset == "CBIS-DDSM":
+        plt.plot(np.arange(0, n), hist_input.history["binary_accuracy"], label="train_acc")
+        plt.plot(np.arange(0, n), hist_input.history["val_binary_accuracy"], label="val_acc")
+    plt.title(title)
+    plt.xlabel("Epoch #")
+    plt.ylabel("Accuracy")
+    plt.ylim(0, 1.1)
+    plt.legend(loc="upper left")
+    plt.savefig("../output/dataset-{}_model-{}_{}-Accuracy.png".format(config.dataset, config.model, plot_name))
     plt.show()

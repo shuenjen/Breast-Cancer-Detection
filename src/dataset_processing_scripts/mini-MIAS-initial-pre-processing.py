@@ -1,3 +1,5 @@
+# This file is contributed by Adam Jaamour
+
 import os
 
 import cv2

@@ -1,5 +1,9 @@
+# This file is contributed by Adam Jaamour, and Shuen-Jen Chen
+
 from sklearn.preprocessing import LabelEncoder
 import tensorflow as tf
+
+import config
 
 
 def print_runtime(text: str, runtime: float) -> None:
@@ -45,3 +49,19 @@ def create_label_encoder():
     :return: The instantiated label encoder.
     """
     return LabelEncoder()
+
+def print_config() -> None:
+    """
+    Prints config
+    :return: None
+    """
+    print("dataset: ", config.dataset)
+    print("model: ", config.model + ' ' + config.cnn)
+    print("run_mode: ", config.run_mode)
+    print("batch_size: ", config.BATCH_SIZE)
+    print("epoch1: ", config.EPOCH_1)
+    print("epoch2: ", config.EPOCH_2)
+    print("sampling: ", config.SAMPLING)
+    print("dropout: ", config.DROPOUT)
+    print("class_weight: ", config.CLASS_WEIGHT)
+    print("conv_cnt: ", config.CONV_CNT)
