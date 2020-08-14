@@ -32,7 +32,7 @@ python main.py [-h] -d DATASET -m MODEL -c CNN [-r RUNMODE] [-v]
 where:
 * `-h` is a  flag for help on how to run the code.
 * `DATASET` is the dataset to use. Must be either `mini-MIAS` or `CBIS-DDMS`.
-* `MODEL` is the model to use. Must be `basic`, `basic-1`, `basic-3`, `advanced`, '`advanced-1`' or `advanced-3`.
+* `MODEL` is the model to use. Must be `basic`, `basic-1`, `basic-3`, `advanced`, '`advanced-1`' or `advanced-3`. (ex: basic-1 means basic model with breast desity as feature; basic-3 means basic model with breast density and the type of mammogram as features.)
 * `CNN` is the CNN model to use. Must be either `VGG` or `ResNet`.
 * `RUNMODE` is the mode to run in (`train` or `test`). Default value is `train`.
 * `-v` is a flag controlling verbose mode, which prints additional statements for debugging purposes.
