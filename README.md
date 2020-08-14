@@ -26,15 +26,15 @@ source /Breast-Cancer-Detection-Code/tf2/venv/bin/activate
 `cd` into the `src` directory and run the code:
 
 ```
-python main.py [-h] -d DATASET -m MODEL [-r RUNMODE] [-i IMAGESIZE] [-v]
+python main.py [-h] -d DATASET -m MODEL -c CNN [-r RUNMODE] [-v]
 ```
 
 where:
 * `-h` is a  flag for help on how to run the code.
 * `DATASET` is the dataset to use. Must be either `mini-MIAS` or `CBIS-DDMS`.
-* `MODEL` is the model to use. Must be either `basic` or `advanced`.
+* `MODEL` is the model to use. Must be `basic`, `basic-1`, `basic-3`, `advanced`, '`advanced-1`' or `advanced-3`.
+* `CNN` is the CNN model to use. Must be either `VGG` or `ResNet`.
 * `RUNMODE` is the mode to run in (`train` or `test`). Default value is `train`.
-* `IMAGESIZE` is the image size to feed into the CNN model (`small` - 512x512px; or `large` - 2048x2048px). Default value is `small`.
 * `-v` is a flag controlling verbose mode, which prints additional statements for debugging purposes.
 
 ## Dataset usage
