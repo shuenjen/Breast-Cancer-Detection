@@ -33,6 +33,16 @@ def generate_vgg_model_advance(classes_len: int):
                          padding='same'))
         model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
+#     model.add(Conv2D(3, (5, 5),
+#                      activation='relu',
+#                      padding='same'))
+#     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+#     model.add(Conv2D(3, (3, 3),
+#                      activation='relu',
+#                      padding='same'))
+#     model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
     # Generate a VGG19 model with pre-trained ImageNet weights, input as given above, excluded fully connected layers.
     model_base = VGG19(include_top=False, weights='imagenet')
     
